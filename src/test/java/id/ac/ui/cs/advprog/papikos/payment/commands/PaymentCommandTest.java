@@ -2,8 +2,8 @@ package id.ac.ui.cs.advprog.papikos.payment.commands;
 
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
-import id.ac.ui.cs.advprog.payment.model.Balance;
-import id.ac.ui.cs.advprog.payment.repository.BalanceRepository;
+import id.ac.ui.cs.advprog.papikos.payment.model.Balance;
+import id.ac.ui.cs.advprog.papikos.payment.repository.BalanceRepository;
 
 class PaymentCommandTest {
     @Test
