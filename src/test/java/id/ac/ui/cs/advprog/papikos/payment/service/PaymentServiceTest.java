@@ -1,17 +1,39 @@
 package id.ac.ui.cs.advprog.papikos.payment.service;
 
-import static org.mockito.Mockito.*;
-import org.junit.jupiter.api.Test;
-import id.ac.ui.cs.advprog.papikos.payment.commands.PaymentCommand;
+import id.ac.ui.cs.advprog.papikos.payment.model.User;
 import id.ac.ui.cs.advprog.papikos.payment.repository.BalanceRepository;
+import id.ac.ui.cs.advprog.papikos.payment.repository.TransactionRepository;
+import id.ac.ui.cs.advprog.papikos.payment.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+@ActiveProfiles("test")
 class PaymentServiceTest {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private BalanceRepository balanceRepository;
+
+    @BeforeEach
+    void setUp() {
+        // Data dummy sudah otomatis terbuat dari TestDataConfig
+    }
+
     @Test
     void testTopUp() {
-        BalanceRepository balanceRepo = mock(BalanceRepository.class);
-        PaymentService paymentService = new PaymentService(balanceRepo, null);
-
         paymentService.topUp("user1", 100000);
-        verify(balanceRepo, atLeastOnce()).findByUserId("user1");
+        var balance = balanceRepository.findByUserId("user1").orElseThrow();
+        assertEquals(100000, balance.getAmount());
     }
 }
