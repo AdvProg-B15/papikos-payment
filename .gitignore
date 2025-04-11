@@ -26,6 +26,11 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+### Environment Variables ###
+.env
+.env.*
+env/
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
@@ -35,3 +40,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### QODO ###
+.qodo
