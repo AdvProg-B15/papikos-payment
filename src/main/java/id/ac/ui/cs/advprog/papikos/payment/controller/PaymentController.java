@@ -61,18 +61,11 @@ public class PaymentController {
             @Valid @RequestBody TopUpRequest request, // Validate the request body DTO
             @AuthenticationPrincipal Jwt principal) { // Get authenticated user info
         UUID userId = getUserIdFromPrincipal(principal);
-        log.info("API: Received top-up initiation request for userId: {} with amount {}", userId, request.getAmount());
+        log.info("API: Received top-up initiation request for userId: {} with amount {}", userId, request.amount());
         TopUpInitiationResponse response = paymentService.initiateTopUp(userId, request);
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint to handle webhook callbacks from an external payment gateway
-     * confirming a top-up transaction.
-     * POST /api/v1/payments/topup/webhook
-     * NOTE: This endpoint is typically NOT protected by user authentication,
-     * but MUST be secured by other means (e.g., verifying webhook signature).
-     */
     @PostMapping("/topup/webhook")
     public ResponseEntity<Void> handleTopUpWebhook(@RequestBody String payload) {
         // --- SECURITY WARNING ---
@@ -122,9 +115,9 @@ public class PaymentController {
             @Valid @RequestBody PaymentRequest request, // Validate request DTO
             @AuthenticationPrincipal Jwt principal) { // Get authenticated user
         UUID userId = getUserIdFromPrincipal(principal);
-        log.info("API: Received payment request for rentalId: {} from userId: {}", request.getRentalId(), userId);
+        log.info("API: Received payment request for rentalId: {} from userId: {}", request.rentalId(), userId);
         TransactionDto transactionDto = paymentService.payForRental(userId, request);
-        log.info("API: Payment successful for rentalId: {}. TransactionId: {}", request.getRentalId(), transactionDto.transactionId());
+        log.info("API: Payment successful for rentalId: {}. TransactionId: {}", request.rentalId(), transactionDto.transactionId());
         return ResponseEntity.ok(transactionDto);
     }
 

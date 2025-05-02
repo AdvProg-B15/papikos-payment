@@ -60,18 +60,18 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional // This method modifies data
     public TopUpInitiationResponse initiateTopUp(UUID userId, TopUpRequest request) {
-        log.info("Initiating top-up for userId: {} with amount: {}", userId, request.getAmount());
+        log.info("Initiating top-up for userId: {} with amount: {}", userId, request.amount());
 
         // Basic validation for the amount
-        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Invalid top-up amount received: {}", request.getAmount());
+        if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Invalid top-up amount received: {}", request.amount());
             throw new InvalidOperationException("Top-up amount must be positive.");
         }
 
         // Create a transaction record to track this top-up attempt
         Transaction transaction = new Transaction();
         transaction.setUserId(userId);
-        transaction.setAmount(request.getAmount());
+        transaction.setAmount(request.amount());
         transaction.setTransactionType(TransactionType.TOPUP);
         transaction.setStatus(TransactionStatus.PENDING); // Starts as pending
         transaction.setNotes("Top-up initiated.");
@@ -143,23 +143,23 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional // Complex operation involving multiple steps and services
     public TransactionDto payForRental(UUID tenantUserId, PaymentRequest request) {
         log.info("Processing payment for rentalId: {} by tenantId: {} for amount: {}",
-                request.getRentalId(), tenantUserId, request.getAmount());
+                request.rentalId(), tenantUserId, request.amount());
 
         // 1. Get Rental Details (call external Rental Service)
         RentalDetailsDto rental;
         try {
-            log.debug("Fetching rental details for rentalId: {}", request.getRentalId());
-            rental = rentalServiceClient.getRentalDetailsForPayment(request.getRentalId());
+            log.debug("Fetching rental details for rentalId: {}", request.rentalId());
+            rental = rentalServiceClient.getRentalDetailsForPayment(request.rentalId());
             if (rental == null) { // Defensive check
-                throw new PaymentProcessingException("Received null rental details for rentalId: " + request.getRentalId());
+                throw new PaymentProcessingException("Received null rental details for rentalId: " + request.rentalId());
             }
             log.info("Fetched rental details for rentalId: {}. Owner={}, Tenant={}, Status={}, Price={}",
                     rental.getRentalId(), rental.getOwnerUserId(), rental.getTenantUserId(), rental.getStatus(), rental.getMonthlyRentPrice());
         } catch (ResourceNotFoundException e) {
-            log.warn("Payment failed: Rental not found via RentalService for rentalId: {}", request.getRentalId());
+            log.warn("Payment failed: Rental not found via RentalService for rentalId: {}", request.rentalId());
             throw e; // Re-throw to be handled by controller advice
         } catch (Exception e) { // Catch other potential errors from the client call
-            log.error("Payment failed: Error fetching rental details for rentalId {}: {}", request.getRentalId(), e.getMessage(), e);
+            log.error("Payment failed: Error fetching rental details for rentalId {}: {}", request.rentalId(), e.getMessage(), e);
             throw new PaymentProcessingException("Failed to retrieve rental details due to an internal error.", e);
         }
 
@@ -172,29 +172,29 @@ public class PaymentServiceImpl implements PaymentService {
         }
         // Check if the rental is in a state where payment is allowed
         if (!"APPROVED".equalsIgnoreCase(rental.getStatus()) && !"ACTIVE".equalsIgnoreCase(rental.getStatus())) {
-            log.warn("Payment failed: Rental {} is not in APPROVED or ACTIVE state (status: {}).", request.getRentalId(), rental.getStatus());
+            log.warn("Payment failed: Rental {} is not in APPROVED or ACTIVE state (status: {}).", request.rentalId(), rental.getStatus());
             throw new InvalidOperationException("Rental is not approved or active for payment.");
         }
         // Check if the payment amount matches the expected rent price
-        if (rental.getMonthlyRentPrice() == null || request.getAmount() == null || rental.getMonthlyRentPrice().compareTo(request.getAmount()) != 0) {
-            log.warn("Payment amount mismatch for rental {}. Expected: {}, Received: {}", request.getRentalId(), rental.getMonthlyRentPrice(), request.getAmount());
+        if (rental.getMonthlyRentPrice() == null || request.amount() == null || rental.getMonthlyRentPrice().compareTo(request.amount()) != 0) {
+            log.warn("Payment amount mismatch for rental {}. Expected: {}, Received: {}", request.rentalId(), rental.getMonthlyRentPrice(), request.amount());
             throw new InvalidOperationException("Payment amount does not match the expected rental price.");
         }
 
         UUID ownerUserId = rental.getOwnerUserId();
-        BigDecimal paymentAmount = request.getAmount();
+        BigDecimal paymentAmount = request.amount();
 
         // 3. Perform the Core Balance Transfer Logic
         // This helper method locks balances and updates records atomically
         Transaction tenantPaymentTransaction;
         try {
-            tenantPaymentTransaction = performInternalTransfer(tenantUserId, ownerUserId, paymentAmount, request.getRentalId());
-            log.info("Internal transfer completed for rental {}. Tenant Tx ID: {}", request.getRentalId(), tenantPaymentTransaction.getTransactionId());
+            tenantPaymentTransaction = performInternalTransfer(tenantUserId, ownerUserId, paymentAmount, request.rentalId());
+            log.info("Internal transfer completed for rental {}. Tenant Tx ID: {}", request.rentalId(), tenantPaymentTransaction.getTransactionId());
         } catch (InsufficientBalanceException | ResourceNotFoundException e) {
             log.warn("Payment failed during internal transfer: {}", e.getMessage());
             throw e; // Re-throw specific known exceptions
         } catch (Exception e) { // Catch unexpected issues during transfer
-            log.error("Payment failed: Unexpected error during internal transfer for rental {}: {}", request.getRentalId(), e.getMessage(), e);
+            log.error("Payment failed: Unexpected error during internal transfer for rental {}: {}", request.rentalId(), e.getMessage(), e);
             throw new PaymentProcessingException("Payment failed due to an internal error during balance transfer.", e);
         }
 
