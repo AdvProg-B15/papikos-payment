@@ -1,16 +1,28 @@
 package id.ac.ui.cs.advprog.papikos.payment.repository;
 
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    Page<Transaction> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+import id.ac.ui.cs.advprog.papikos.payment.entity.Transaction;
+import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-    // Example Custom Query for filtering (using JPQL)
+import java.time.LocalDateTime;
+import java.util.UUID; // Import UUID
+
+// Repository now deals with UUID as the primary key type
+public interface TransactionRepository extends JpaRepository<Transaction, UUID> { // Changed Long to UUID
+
+    Page<Transaction> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable); // Changed Long to UUID
+
     @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
             "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
-            "AND (:endDate IS NULL OR t.createdAt < :endDate) " + // End date often exclusive
+            "AND (:endDate IS NULL OR t.createdAt < :endDate) " +
             "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
             "ORDER BY t.createdAt DESC")
     Page<Transaction> findUserTransactionsByFilter(
-            @Param("userId") Long userId,
+            @Param("userId") UUID userId, // Changed Long to UUID
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("transactionType") TransactionType transactionType,
