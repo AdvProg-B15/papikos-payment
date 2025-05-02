@@ -1,25 +1,22 @@
 package id.ac.ui.cs.advprog.papikos.payment.service;
 
-import id.ac.ui.cs.advprog.papikos.payment.commands.PaymentCommand;
-import id.ac.ui.cs.advprog.papikos.payment.commands.TopUpCommand;
-import id.ac.ui.cs.advprog.papikos.payment.repository.UserBalanceRepository;
-import id.ac.ui.cs.advprog.papikos.payment.repository.TransactionRepository;
-import org.springframework.stereotype.Service;
+import id.ac.ui.cs.advprog.papikos.payment.dto.*;
+import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-@Service
-public class PaymentService {
-    private final UserBalanceRepository balanceRepository;
-    private final TransactionRepository transactionRepository;
+import java.time.LocalDate;
+import java.util.UUID; // Import UUID
 
-    public PaymentService(UserBalanceRepository balanceRepository,
-                          TransactionRepository transactionRepository) {
-        this.balanceRepository = balanceRepository;
-        this.transactionRepository = transactionRepository;
-    }
+public interface PaymentService {
 
-    public void topUp(String userId, long amount) {
-        PaymentCommand command = new TopUpCommand(
-                userId, amount, balanceRepository, transactionRepository);
-        command.execute();
-    }
+    BalanceDto getUserBalance(UUID userId); // Changed Long to UUID
+
+    TopUpInitiationResponse initiateTopUp(UUID userId, TopUpRequest request); // Changed Long to UUID
+
+    void confirmTopUp(UUID transactionId); // Changed Long to UUID
+
+    TransactionDto payForRental(UUID tenantUserId, PaymentRequest request); // Changed Long to UUID
+
+    Page<TransactionDto> getTransactionHistory(UUID userId, LocalDate startDate, LocalDate endDate, TransactionType type, Pageable pageable); // Changed Long to UUID
 }
