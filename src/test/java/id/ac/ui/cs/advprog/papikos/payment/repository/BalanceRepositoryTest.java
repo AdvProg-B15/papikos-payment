@@ -1,6 +1,6 @@
 package id.ac.ui.cs.advprog.papikos.payment.repository;
 
-import id.ac.ui.cs.advprog.papikos.payment.model.Balance;
+import id.ac.ui.cs.advprog.papikos.payment.model.UserBalance;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -14,11 +14,11 @@ class BalanceRepositoryTest {
 
     @Test
     void testFindByUserId() {
-        Balance balance = new Balance();
+        UserBalance balance = new UserBalance();
         balance.setUserId("user1");
         balanceRepository.save(balance);
 
-        Optional<Balance> found = balanceRepository.findByUserId("user1");
+        Optional<UserBalance> found = balanceRepository.findByUserId("user1");
         assertTrue(found.isPresent());
     }
 }
