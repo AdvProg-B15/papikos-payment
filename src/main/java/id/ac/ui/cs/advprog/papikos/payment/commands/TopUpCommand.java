@@ -1,8 +1,8 @@
 package id.ac.ui.cs.advprog.papikos.payment.commands;
 
-import id.ac.ui.cs.advprog.papikos.payment.model.UserBalance;
-import id.ac.ui.cs.advprog.papikos.payment.model.TransactionType;
-import id.ac.ui.cs.advprog.papikos.payment.model.Transaction;
+import id.ac.ui.cs.advprog.papikos.payment.entity.UserBalance;
+import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
+import id.ac.ui.cs.advprog.papikos.payment.entity.Transaction;
 import id.ac.ui.cs.advprog.papikos.payment.repository.UserBalanceRepository;
 import id.ac.ui.cs.advprog.papikos.payment.repository.TransactionRepository;
 

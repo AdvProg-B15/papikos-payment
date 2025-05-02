@@ -1,6 +1,6 @@
 package id.ac.ui.cs.advprog.papikos.payment.repository;
 
-import id.ac.ui.cs.advprog.papikos.payment.model.UserBalance;
+import id.ac.ui.cs.advprog.papikos.payment.entity.UserBalance;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;

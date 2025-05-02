@@ -1,4 +1,4 @@
-package id.ac.ui.cs.advprog.papikos.payment.model;
+package id.ac.ui.cs.advprog.papikos.payment.entity;
 
 import org.junit.jupiter.api.Test;
 

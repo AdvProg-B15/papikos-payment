@@ -1,4 +1,4 @@
-package id.ac.ui.cs.advprog.papikos.payment.model;
+package id.ac.ui.cs.advprog.papikos.payment.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
