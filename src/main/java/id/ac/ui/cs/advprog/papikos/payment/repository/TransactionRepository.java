@@ -1,9 +1,18 @@
 package id.ac.ui.cs.advprog.papikos.payment.repository;
 
-import id.ac.ui.cs.advprog.papikos.payment.model.Transaction;
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.List;
-
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    List<Transaction> findByUserId(String userId);
+    Page<Transaction> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    // Example Custom Query for filtering (using JPQL)
+    @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
+            "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
+            "AND (:endDate IS NULL OR t.createdAt < :endDate) " + // End date often exclusive
+            "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
+            "ORDER BY t.createdAt DESC")
+    Page<Transaction> findUserTransactionsByFilter(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("transactionType") TransactionType transactionType,
+            Pageable pageable);
 }
