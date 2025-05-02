@@ -3,17 +3,17 @@ package id.ac.ui.cs.advprog.papikos.payment.commands;
 import id.ac.ui.cs.advprog.papikos.payment.model.Balance;
 import id.ac.ui.cs.advprog.papikos.payment.model.PaymentType;
 import id.ac.ui.cs.advprog.papikos.payment.model.Transaction;
-import id.ac.ui.cs.advprog.papikos.payment.repository.BalanceRepository;
+import id.ac.ui.cs.advprog.papikos.payment.repository.UserBalanceRepository;
 import id.ac.ui.cs.advprog.papikos.payment.repository.TransactionRepository;
 
 public class TopUpCommand implements PaymentCommand {
     private final String userId;
     private final long amount;
-    private final BalanceRepository balanceRepository;
+    private final UserBalanceRepository balanceRepository;
     private final TransactionRepository transactionRepository;
 
     public TopUpCommand(String userId, long amount,
-                        BalanceRepository balanceRepository,
+                        UserBalanceRepository balanceRepository,
                         TransactionRepository transactionRepository) {
         this.userId = userId;
         this.amount = amount;

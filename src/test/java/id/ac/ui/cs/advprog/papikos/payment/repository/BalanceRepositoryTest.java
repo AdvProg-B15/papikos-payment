@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 class BalanceRepositoryTest {
     @Autowired
-    private BalanceRepository balanceRepository;
+    private UserBalanceRepository balanceRepository;
 
     @Test
     void testFindByUserId() {
