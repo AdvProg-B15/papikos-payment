@@ -1,7 +1,6 @@
 package id.ac.ui.cs.advprog.papikos.payment.controller;
 
 import id.ac.ui.cs.advprog.papikos.payment.dto.*;
-import id.ac.ui.cs.advprog.papikos.payment.entity.Transaction;
 import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
 import id.ac.ui.cs.advprog.papikos.payment.service.PaymentService;
 import jakarta.validation.Valid;
@@ -30,6 +29,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     private UUID getUserIdFromPrincipal(Jwt principal) {
+        //For testing without using other service
         return UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
 //        if (principal == null) {
 //            // This situation should ideally be prevented by Spring Security filters
@@ -50,13 +50,15 @@ public class PaymentController {
 //        }
     }
 
-    @PostMapping("/topup/initiate")
-    public ResponseEntity<TransactionDto> TopUp(
+    @PostMapping("/topup")
+    public ResponseEntity<TransactionDto> topUp(
             @Valid @RequestBody TopUpRequest request,
-            @AuthenticationPrincipal Jwt principal) {
+            @AuthenticationPrincipal Jwt principal
+            ) {
         UUID userId = getUserIdFromPrincipal(principal);
+        //UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
         log.info("API: Received top-up initiation request for userId: {} with amount {}", userId, request.amount());
-        TransactionDto completedTransaction = paymentService.TopUp(userId, request);
+        TransactionDto completedTransaction = paymentService.topUp(userId, request);
         log.info("API: Top-Up successful for userId: {} TransactionId {}", userId, completedTransaction.transactionId());
         return ResponseEntity.ok(completedTransaction);
     }
@@ -64,8 +66,8 @@ public class PaymentController {
 
     @PostMapping("/pay")
     public ResponseEntity<TransactionDto> payForRental(
-            @Valid @RequestBody PaymentRequest request, // Validate request DTO
-            @AuthenticationPrincipal Jwt principal) { // Get authenticated user
+            @Valid @RequestBody PaymentRequest request,
+            @AuthenticationPrincipal Jwt principal) {
         UUID userId = getUserIdFromPrincipal(principal);
         log.info("API: Received payment request for rentalId: {} from userId: {}", request.rentalId(), userId);
         TransactionDto transactionDto = paymentService.payForRental(userId, request);
@@ -87,10 +89,9 @@ public class PaymentController {
             // Optional request parameters for filtering
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) TransactionType type, // Spring converts string to enum
-            // Spring Data automatically injects pagination info from request params (e.g., ?page=0&size=10)
+            @RequestParam(required = false) TransactionType type,
             Pageable pageable,
-            @AuthenticationPrincipal Jwt principal) { // Get authenticated user
+            @AuthenticationPrincipal Jwt principal) {
         UUID userId = getUserIdFromPrincipal(principal);
         log.info("API: Received transaction history request for userId: {} with params - Start: {}, End: {}, Type: {}, Page: {}",
                 userId, startDate, endDate, type, pageable);

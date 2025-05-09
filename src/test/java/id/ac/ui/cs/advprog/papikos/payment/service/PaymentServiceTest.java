@@ -9,7 +9,6 @@ import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
 import id.ac.ui.cs.advprog.papikos.payment.entity.UserBalance;
 import id.ac.ui.cs.advprog.papikos.payment.exception.InsufficientBalanceException;
 import id.ac.ui.cs.advprog.papikos.payment.exception.InvalidOperationException;
-import id.ac.ui.cs.advprog.papikos.payment.exception.PaymentProcessingException;
 import id.ac.ui.cs.advprog.papikos.payment.exception.ResourceNotFoundException;
 import id.ac.ui.cs.advprog.papikos.payment.repository.TransactionRepository;
 import id.ac.ui.cs.advprog.papikos.payment.repository.UserBalanceRepository;
@@ -162,7 +161,7 @@ class PaymentServiceTest {
             return tx;
         });
 
-        TransactionDto resultDto = paymentService.TopUp(userId, request);
+        TransactionDto resultDto = paymentService.topUp(userId, request);
 
         assertNotNull(resultDto);
         assertEquals(userId, resultDto.userId());
@@ -204,7 +203,7 @@ class PaymentServiceTest {
             return tx;
         });
 
-        TransactionDto resultDto = paymentService.TopUp(userId, request);
+        TransactionDto resultDto = paymentService.topUp(userId, request);
 
         assertNotNull(resultDto);
         assertEquals(TransactionStatus.COMPLETED, resultDto.status());

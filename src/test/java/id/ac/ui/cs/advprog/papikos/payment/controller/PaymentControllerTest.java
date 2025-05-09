@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -36,7 +35,6 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -88,7 +86,7 @@ class PaymentControllerTest {
                 LocalDateTime.now()
         );
 
-        when(paymentService.TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
+        when(paymentService.topUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
                 .thenReturn(completedTransactionDto);
 
         mockMvc.perform(post("/api/v1/payments/topup/initiate")
@@ -103,7 +101,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.amount", is(TOPUP_AMOUNT.doubleValue())))
                 .andExpect(jsonPath("$.status", is(TransactionStatus.COMPLETED.toString())));
 
-        verify(paymentService).TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
+        verify(paymentService).topUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
     }
 
     @Test
@@ -113,7 +111,7 @@ class PaymentControllerTest {
         TopUpRequest request = new TopUpRequest(BigDecimal.ZERO);
 
 
-        when(paymentService.TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
+        when(paymentService.topUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
                 .thenThrow(new InvalidOperationException("Amount must be positive"));
 
         mockMvc.perform(post("/api/v1/payments/topup/initiate")
@@ -124,7 +122,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.message", containsString("Amount must be positive")));
 
 
-        verify(paymentService).TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
+        verify(paymentService).topUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
     }
 
     @Test

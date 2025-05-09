@@ -55,7 +55,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public TransactionDto TopUp(UUID userId, TopUpRequest request) {
+    public TransactionDto topUp(UUID userId, TopUpRequest request) {
         log.info("Initiating top-up for userId: {} with amount: {}", userId, request.amount());
 
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
@@ -94,6 +94,45 @@ public class PaymentServiceImpl implements PaymentService {
 
         return mapToTransactionDto(savedTransaction); // Return the DTO of the completed transaction
     }
+
+
+    //For API Testing Without otherService
+//    @Override
+//    @Transactional
+//    public TransactionDto topUp(UUID userId, TopUpRequest request) {
+//        log.info("Initiating top-up for userId: {} with amount: {}", userId, request.amount());
+//
+//        if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+//            log.warn("Invalid top-up amount received: {}", request.amount());
+//            throw new InvalidOperationException("Top-up amount must be positive.");
+//        }
+//
+//        // Find and Lock the user's balance record
+//        log.debug("Attempting to lock balance for userId: {}", userId);
+//        int angka = 5000;
+//        BigDecimal newAngka = new BigDecimal(angka);
+//        UserBalance userBalance = new UserBalance(userId, newAngka);
+//        log.debug("Successfully locked balance for userId: {}", userBalance.getUserId());
+//
+//        // Update the balance
+//        BigDecimal oldBalance = userBalance.getBalance();
+//        userBalance.setBalance(oldBalance.add(request.amount()));
+//        userBalanceRepository.save(userBalance); // Save the updated balance
+//        log.info("Updated balance for userId: {}. Old: {}, New: {}", userBalance.getUserId(), oldBalance, userBalance.getBalance());
+//
+//        // Create and save the COMPLETED transaction record
+//        Transaction transaction = new Transaction();
+//        transaction.setUserId(userId);
+//        transaction.setAmount(request.amount());
+//        transaction.setTransactionType(TransactionType.TOPUP);
+//        transaction.setStatus(TransactionStatus.COMPLETED);
+//        transaction.setNotes("Internal top-up completed automatically.");
+//
+//        Transaction savedTransaction = transactionRepository.save(transaction);
+//        log.info("Saved COMPLETED internal top-up transactionId: {}", savedTransaction.getTransactionId());
+//
+//        return mapToTransactionDto(savedTransaction); // Return the DTO of the completed transaction
+//    }
 
 
     @Override

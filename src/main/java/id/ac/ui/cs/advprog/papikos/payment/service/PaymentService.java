@@ -15,7 +15,7 @@ public interface PaymentService {
 
     BalanceDto getUserBalance(UUID userId);
 
-    TransactionDto TopUp(UUID userId, TopUpRequest request);
+    TransactionDto topUp(UUID userId, TopUpRequest request);
 
     TransactionDto payForRental(UUID tenantUserId, PaymentRequest request);
 
