@@ -1,11 +1,8 @@
 package id.ac.ui.cs.advprog.papikos.payment.model;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.EnumType;
+import jakarta.persistence.*;
 
 @Entity
+@Table(name = "app_user")
 public class User {
     @Id
     private String id;

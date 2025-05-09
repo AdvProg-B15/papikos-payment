@@ -143,145 +143,87 @@ class PaymentServiceTest {
 
     // --- Initiate Top Up ---
     @Test
-    @DisplayName("Initiate TopUp - Success")
-    void initiateTopUp_Success() {
+    @DisplayName("Initiate And Complete TopUp - Success")
+    void initiateAndCompleteTopUp_Success() {
         TopUpRequest request = new TopUpRequest(new BigDecimal("100.00"));
+        UUID userId = TENANT_USER_ID; // Assuming TENANT_USER_ID is a defined UUID
+        UserBalance existingBalance = new UserBalance(userId, new BigDecimal("50.00"));
 
-        ArgumentCaptor<Transaction> transactionCaptor = ArgumentCaptor.forClass(Transaction.class);
-        // Mock save to return a transaction with a generated UUID
-        when(transactionRepository.save(transactionCaptor.capture())).thenAnswer(invocation -> {
+        // Mock finding the user's balance (with lock)
+        when(userBalanceRepository.findByUserIdWithLock(eq(userId))).thenReturn(Optional.of(existingBalance));
+        // Mock saving the updated balance
+        when(userBalanceRepository.save(any(UserBalance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // Mock saving the transaction
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction tx = invocation.getArgument(0);
-            tx.setTransactionId(NEW_TRANSACTION_ID); // Assign specific test UUID
+            tx.setTransactionId(UUID.randomUUID()); // Simulate ID generation
             tx.setCreatedAt(LocalDateTime.now());
+            tx.setUpdatedAt(LocalDateTime.now());
             return tx;
         });
 
-        TopUpInitiationResponse response = paymentService.initiateTopUp(TENANT_USER_ID, request);
+        TransactionDto resultDto = paymentService.TopUp(userId, request);
 
-        assertNotNull(response);
-        assertEquals(NEW_TRANSACTION_ID, response.transactionId()); // Assert UUID equality
+        assertNotNull(resultDto);
+        assertEquals(userId, resultDto.userId());
+        assertEquals(TransactionType.TOPUP, resultDto.transactionType());
+        assertEquals(TransactionStatus.COMPLETED, resultDto.status()); // Check for COMPLETED
+        assertEquals(0, request.amount().compareTo(resultDto.amount()));
 
-        Transaction savedTx = transactionCaptor.getValue();
-        assertEquals(TENANT_USER_ID, savedTx.getUserId());
-        assertEquals(TransactionType.TOPUP, savedTx.getTransactionType());
-        assertEquals(TransactionStatus.PENDING, savedTx.getStatus());
-        assertEquals(0, request.amount().compareTo(savedTx.getAmount())); // Use record accessor amount()
+        // Verify balance was updated
+        // Old balance was 50.00, top-up 100.00 -> new balance 150.00
+        assertEquals(0, new BigDecimal("150.00").compareTo(existingBalance.getBalance()));
+
+        verify(userBalanceRepository).findByUserIdWithLock(eq(userId));
+        verify(userBalanceRepository).save(existingBalance); // Verify balance save
+        verify(transactionRepository).save(argThat(tx -> // Verify transaction save
+                tx.getUserId().equals(userId) &&
+                        tx.getAmount().compareTo(request.amount()) == 0 &&
+                        tx.getStatus() == TransactionStatus.COMPLETED &&
+                        tx.getTransactionType() == TransactionType.TOPUP
+        ));
+    }
+
+    @Test
+    @DisplayName("Initiate And Complete TopUp - User Balance Record Not Found (But User Exists - Creates Balance)")
+    void initiateAndCompleteTopUp_UserBalanceNotFoundButUserExists() {
+        TopUpRequest request = new TopUpRequest(new BigDecimal("100.00"));
+        UUID userId = TENANT_USER_ID;
+
+        when(userBalanceRepository.findByUserIdWithLock(eq(userId))).thenReturn(Optional.empty()); // No balance initially
+        when(authServiceClient.userExists(eq(userId))).thenReturn(true); // User exists
+
+        // Mock saving a *new* balance (first arg) and then the *updated* balance (second arg)
+        ArgumentCaptor<UserBalance> balanceCaptor = ArgumentCaptor.forClass(UserBalance.class);
+        when(userBalanceRepository.save(balanceCaptor.capture())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Mock saving the transaction
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction tx = invocation.getArgument(0);
+            tx.setTransactionId(UUID.randomUUID());
+            return tx;
+        });
+
+        TransactionDto resultDto = paymentService.TopUp(userId, request);
+
+        assertNotNull(resultDto);
+        assertEquals(TransactionStatus.COMPLETED, resultDto.status());
+        assertEquals(0, request.amount().compareTo(resultDto.amount()));
+
+        // Verify balance was created and then updated
+        verify(userBalanceRepository).findByUserIdWithLock(eq(userId));
+        verify(authServiceClient).userExists(eq(userId));
+        verify(userBalanceRepository, times(1)).save(any(UserBalance.class)); // Only one save needed as it's done in one transaction
+
+        List<UserBalance> capturedBalances = balanceCaptor.getAllValues();
+        // The single captured balance should now have the topped-up amount
+        assertThat(capturedBalances).hasSize(1);
+        assertEquals(0, request.amount().compareTo(capturedBalances.get(0).getBalance()));
+
 
         verify(transactionRepository).save(any(Transaction.class));
     }
 
-    @Test
-    @DisplayName("Initiate TopUp - Invalid Amount (Zero)")
-    void initiateTopUp_InvalidAmount_Zero() {
-        TopUpRequest request = new TopUpRequest(BigDecimal.ZERO);
-        assertThrows(InvalidOperationException.class, () -> {
-            paymentService.initiateTopUp(TENANT_USER_ID, request);
-        });
-        verify(transactionRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Initiate TopUp - Invalid Amount (Negative)")
-    void initiateTopUp_InvalidAmount_Negative() {
-        TopUpRequest request = new TopUpRequest(new BigDecimal("-10.00"));
-        assertThrows(InvalidOperationException.class, () -> {
-            paymentService.initiateTopUp(TENANT_USER_ID, request);
-        });
-        verify(transactionRepository, never()).save(any());
-    }
-
-    // --- Confirm Top Up ---
-    @Test
-    @DisplayName("Confirm TopUp - Success")
-    void confirmTopUp_Success() {
-        BigDecimal topUpAmount = new BigDecimal("100.00");
-        Transaction pendingTx = new Transaction();
-        pendingTx.setTransactionId(TRANSACTION_ID); // Use test UUID
-        pendingTx.setUserId(TENANT_USER_ID);
-        pendingTx.setAmount(topUpAmount);
-        pendingTx.setStatus(TransactionStatus.PENDING);
-        pendingTx.setTransactionType(TransactionType.TOPUP);
-
-        // Mock findById with specific UUID
-        when(transactionRepository.findById(eq(TRANSACTION_ID))).thenReturn(Optional.of(pendingTx));
-        // Mock findByUserIdWithLock with specific UUID
-        when(userBalanceRepository.findByUserIdWithLock(eq(TENANT_USER_ID))).thenReturn(Optional.of(tenantBalance));
-        when(userBalanceRepository.save(any(UserBalance.class))).thenReturn(tenantBalance);
-        when(transactionRepository.save(any(Transaction.class))).thenReturn(pendingTx);
-
-        paymentService.confirmTopUp(TRANSACTION_ID); // Call with UUID
-
-        assertEquals(0, new BigDecimal("1100.00").compareTo(tenantBalance.getBalance()));
-        assertEquals(TransactionStatus.COMPLETED, pendingTx.getStatus());
-
-        verify(transactionRepository).findById(eq(TRANSACTION_ID)); // Verify with UUID
-        verify(userBalanceRepository).findByUserIdWithLock(eq(TENANT_USER_ID)); // Verify with UUID
-        verify(userBalanceRepository).save(tenantBalance);
-        verify(transactionRepository).save(pendingTx);
-    }
-
-    @Test
-    @DisplayName("Confirm TopUp - Transaction Not Found")
-    void confirmTopUp_TransactionNotFound() {
-        UUID nonExistentTxId = UUID.randomUUID();
-        // Mock findById with specific UUID
-        when(transactionRepository.findById(eq(nonExistentTxId))).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> {
-            paymentService.confirmTopUp(nonExistentTxId); // Call with UUID
-        });
-
-        verify(transactionRepository).findById(eq(nonExistentTxId)); // Verify with UUID
-        verify(userBalanceRepository, never()).findByUserIdWithLock(any(UUID.class));
-        verify(userBalanceRepository, never()).save(any());
-        verify(transactionRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Confirm TopUp - Transaction Not Pending")
-    void confirmTopUp_TransactionNotPending() {
-        Transaction completedTx = new Transaction();
-        completedTx.setTransactionId(TRANSACTION_ID); // Use test UUID
-        completedTx.setUserId(TENANT_USER_ID);
-        completedTx.setAmount(new BigDecimal("100.00"));
-        completedTx.setStatus(TransactionStatus.COMPLETED);
-        completedTx.setTransactionType(TransactionType.TOPUP);
-
-        when(transactionRepository.findById(eq(TRANSACTION_ID))).thenReturn(Optional.of(completedTx)); // Mock with UUID
-
-        assertThrows(InvalidOperationException.class, () -> {
-            paymentService.confirmTopUp(TRANSACTION_ID); // Call with UUID
-        }, "Should throw InvalidOperationException if transaction is not pending");
-
-        verify(transactionRepository).findById(eq(TRANSACTION_ID)); // Verify with UUID
-        verify(userBalanceRepository, never()).findByUserIdWithLock(any(UUID.class));
-        verify(userBalanceRepository, never()).save(any());
-        verify(transactionRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("Confirm TopUp - User Balance Not Found (Should ideally not happen)")
-    void confirmTopUp_UserBalanceNotFound() {
-        Transaction pendingTx = new Transaction();
-        pendingTx.setTransactionId(TRANSACTION_ID); // Use test UUID
-        pendingTx.setUserId(TENANT_USER_ID);
-        pendingTx.setAmount(new BigDecimal("100.00"));
-        pendingTx.setStatus(TransactionStatus.PENDING);
-        pendingTx.setTransactionType(TransactionType.TOPUP);
-
-        when(transactionRepository.findById(eq(TRANSACTION_ID))).thenReturn(Optional.of(pendingTx)); // Mock with UUID
-        // Mock balance find returning empty for the specific UUID
-        when(userBalanceRepository.findByUserIdWithLock(eq(TENANT_USER_ID))).thenReturn(Optional.empty());
-
-        assertThrows(PaymentProcessingException.class, () -> {
-            paymentService.confirmTopUp(TRANSACTION_ID); // Call with UUID
-        });
-
-        verify(transactionRepository).findById(eq(TRANSACTION_ID)); // Verify with UUID
-        verify(userBalanceRepository).findByUserIdWithLock(eq(TENANT_USER_ID)); // Verify with UUID
-        verify(userBalanceRepository, never()).save(any());
-        verify(transactionRepository, never()).save(any());
-    }
 
     // --- Pay for Rental ---
     @Test

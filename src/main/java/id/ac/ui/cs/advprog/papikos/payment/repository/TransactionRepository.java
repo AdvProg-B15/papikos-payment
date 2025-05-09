@@ -9,12 +9,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
-import java.util.UUID; // Import UUID
+import java.util.UUID;
 
-// Repository now deals with UUID as the primary key type
-public interface TransactionRepository extends JpaRepository<Transaction, UUID> { // Changed Long to UUID
+public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
-    Page<Transaction> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable); // Changed Long to UUID
+    Page<Transaction> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     @Query("SELECT t FROM Transaction t WHERE t.userId = :userId " +
             "AND (:startDate IS NULL OR t.createdAt >= :startDate) " +
@@ -22,7 +21,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             "AND (:transactionType IS NULL OR t.transactionType = :transactionType) " +
             "ORDER BY t.createdAt DESC")
     Page<Transaction> findUserTransactionsByFilter(
-            @Param("userId") UUID userId, // Changed Long to UUID
+            @Param("userId") UUID userId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("transactionType") TransactionType transactionType,

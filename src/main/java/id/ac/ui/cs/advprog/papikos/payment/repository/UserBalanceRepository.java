@@ -10,17 +10,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.UUID; // Import UUID
+import java.util.UUID;
 
-public interface UserBalanceRepository extends JpaRepository<UserBalance, UUID> { // Changed Long to UUID
+@Repository
+public interface UserBalanceRepository extends JpaRepository<UserBalance, UUID> {
 
-    // Find by userId (which is the PK and a UUID)
-    Optional<UserBalance> findByUserId(UUID userId); // Changed Long to UUID
+    Optional<UserBalance> findByUserId(UUID userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ub FROM UserBalance ub WHERE ub.userId = :userId") // Explicit query optional but clear
-    Optional<UserBalance> findByUserIdWithLock(@Param("userId") UUID userId); // Changed Long to UUID
+    Optional<UserBalance> findByUserIdWithLock(@Param("userId") UUID userId);
 }

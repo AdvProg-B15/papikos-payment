@@ -2,7 +2,6 @@ package id.ac.ui.cs.advprog.papikos.payment.service;
 
 import id.ac.ui.cs.advprog.papikos.payment.dto.BalanceDto;
 import id.ac.ui.cs.advprog.papikos.payment.dto.PaymentRequest;
-import id.ac.ui.cs.advprog.papikos.payment.dto.TopUpInitiationResponse;
 import id.ac.ui.cs.advprog.papikos.payment.dto.TopUpRequest;
 import id.ac.ui.cs.advprog.papikos.payment.dto.TransactionDto;
 import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
@@ -16,11 +15,7 @@ public interface PaymentService {
 
     BalanceDto getUserBalance(UUID userId);
 
-    TopUpInitiationResponse initiateTopUp(UUID userId, TopUpRequest request);
-
-
-    void confirmTopUp(UUID transactionId);
-
+    TransactionDto TopUp(UUID userId, TopUpRequest request);
 
     TransactionDto payForRental(UUID tenantUserId, PaymentRequest request);
 

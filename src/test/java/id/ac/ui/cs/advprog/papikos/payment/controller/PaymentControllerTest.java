@@ -64,44 +64,56 @@ class PaymentControllerTest {
     public void setup() {
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
-                .apply(springSecurity()) // Apply Spring Security filters
+                .apply(springSecurity())
                 .build();
     }
 
     @Test
-    @DisplayName("POST /payments/topup/initiate - Success")
-    // Use @WithMockUser for basic auth context, but override principal for specific ID
+    @DisplayName("POST /payments/topup/initiate - Success (Immediate Completion)")
     @WithMockUser(username = "test-user", roles = {"TENANT"})
-    void initiateTopUp_Success() throws Exception {
+    void initiateAndCompleteTopUp_Success() throws Exception {
         TopUpRequest request = new TopUpRequest(TOPUP_AMOUNT);
-        // Response DTO uses UUID
-        TopUpInitiationResponse responseDto = new TopUpInitiationResponse(TRANSACTION_ID, "http://gateway.url/pay");
 
-        // Mock service call expecting the specific UUID
-        when(paymentService.initiateTopUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
-                .thenReturn(responseDto);
+        TransactionDto completedTransactionDto = new TransactionDto(
+                TRANSACTION_ID,
+                MOCK_USER_ID,
+                TransactionType.TOPUP,
+                TOPUP_AMOUNT,
+                TransactionStatus.COMPLETED,
+                null,
+                null,
+                null,
+                "Internal top-up completed automatically.",
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+
+        when(paymentService.TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
+                .thenReturn(completedTransactionDto);
 
         mockMvc.perform(post("/api/v1/payments/topup/initiate")
-                        // Inject principal with UUID string in 'sub' claim
                         .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                // Assert UUID as string in JSON path
+                // Assert fields from the TransactionDto
                 .andExpect(jsonPath("$.transactionId", is(TRANSACTION_ID.toString())))
-                .andExpect(jsonPath("$.paymentGatewayUrl", is(responseDto.paymentGatewayUrl())));
+                .andExpect(jsonPath("$.userId", is(MOCK_USER_ID.toString())))
+                .andExpect(jsonPath("$.transactionType", is(TransactionType.TOPUP.toString())))
+                .andExpect(jsonPath("$.amount", is(TOPUP_AMOUNT.doubleValue())))
+                .andExpect(jsonPath("$.status", is(TransactionStatus.COMPLETED.toString())));
 
-        // Verify service call with specific UUID
-        verify(paymentService).initiateTopUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
+        verify(paymentService).TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
     }
 
     @Test
     @DisplayName("POST /payments/topup/initiate - Invalid Amount")
     @WithMockUser(username = "test-user", roles = {"TENANT"})
-    void initiateTopUp_InvalidAmount() throws Exception {
+    void initiateAndCompleteTopUp_InvalidAmount() throws Exception {
         TopUpRequest request = new TopUpRequest(BigDecimal.ZERO);
 
-        when(paymentService.initiateTopUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
+
+        when(paymentService.TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
                 .thenThrow(new InvalidOperationException("Amount must be positive"));
 
         mockMvc.perform(post("/api/v1/payments/topup/initiate")
@@ -111,7 +123,8 @@ class PaymentControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("Amount must be positive")));
 
-        verify(paymentService).initiateTopUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
+
+        verify(paymentService).TopUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
     }
 
     @Test
@@ -266,24 +279,6 @@ class PaymentControllerTest {
 
         // Verify service call with specific UUID and filters
         verify(paymentService).getTransactionHistory(eq(MOCK_USER_ID), any(), any(), eq(TransactionType.PAYMENT), any(Pageable.class));
-    }
-
-    // Webhook test remains conceptual as before, focusing on status code
-    @Test
-    @DisplayName("POST /payments/topup/webhook - Success (Conceptual)")
-    void handleTopUpWebhook_Success() throws Exception {
-        String webhookPayload = "{\"transaction_id\": \"" + TRANSACTION_ID.toString() + "\", \"status\": \"SUCCESS\"}"; // Use UUID string
-
-        // Assume confirmTopUp is called internally by controller after parsing UUID
-        doNothing().when(paymentService).confirmTopUp(eq(TRANSACTION_ID)); // Mock with UUID
-
-        mockMvc.perform(post("/api/v1/payments/topup/webhook")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(webhookPayload))
-                .andExpect(status().isOk());
-
-        // Verification would require inspecting controller logic or using ArgumentCaptor
-        // For now, just verify the test runs and returns OK status
     }
 }
 

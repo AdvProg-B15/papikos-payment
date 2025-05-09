@@ -20,9 +20,8 @@ import java.util.UUID; // Import UUID
 public class UserBalance {
 
     @Id
-    // Assuming userId from Auth Service is also UUID
     @Column(name = "user_id", nullable = false, updatable = false, columnDefinition = "uuid")
-    private UUID userId; // Changed from Long to UUID
+    private UUID userId; //
 
     @Column(name = "balance", nullable = false, precision = 12, scale = 2)
     private BigDecimal balance = BigDecimal.ZERO;

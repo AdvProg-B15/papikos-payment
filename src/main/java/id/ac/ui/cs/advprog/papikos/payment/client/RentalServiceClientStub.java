@@ -20,7 +20,7 @@ public class RentalServiceClientStub implements RentalServiceClient {
     static {
         UUID knownRentalId = UUID.fromString("c1d9b54c-1e1e-4c20-b6f4-9e0d2c9b0c6b");
         UUID knownTenantId = UUID.fromString("a1b7a39a-8f8f-4f19-a5e3-8d9c1b8a9b5a");
-        UUID knownOwnerId = UUID.fromString("b2c8b40b-9g9g-5g20-a6f5-7e0c2b7a8a4b");
+        UUID knownOwnerId = UUID.fromString("b2c8b40b-9a9a-5a20-a6f5-7e0c2b7a8a4b");
 
         RentalDetailsDto rental = new RentalDetailsDto();
         rental.setRentalId(knownRentalId);
