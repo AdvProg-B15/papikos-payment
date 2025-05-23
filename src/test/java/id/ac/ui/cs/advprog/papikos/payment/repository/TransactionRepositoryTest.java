@@ -37,7 +37,6 @@ class TransactionRepositoryTest {
     private LocalDateTime yesterday;
     private LocalDateTime dayBeforeYesterday;
 
-
     @BeforeEach
     void setUpTestData() {
         // Clear any potential data from previous tests (though @DataJpaTest rolls back)
