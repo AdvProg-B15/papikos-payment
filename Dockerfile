@@ -11,8 +11,8 @@ COPY build.gradle settings.gradle gradlew ./
 COPY gradle ./gradle
 
 # Download dependencies. This layer is cached if build files don't change.
-# Run a task that resolves dependencies. dependencies task or build with -x works.
-# Use --build-cache for Gradle's build cache. || true prevents failure if task doesn't exist.
+# Run a task that resolves dependencies. `dependencies` task or `build` with `-x` works.
+# Use `--build-cache` for Gradle's build cache. `|| true` prevents failure if task doesn't exist.
 RUN ./gradlew dependencies --build-cache || true
 
 # Copy the source code into the container
