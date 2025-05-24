@@ -1,0 +1,250 @@
+name: Build, Push, and Update Service Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Version tag to build and apply (e.g., v1.2.3). Must start with "v".'
+        required: true
+        type: string
+  push:
+    tags: [ 'v*.*.*' ]  # Only build on version tags like v1.0.0, v1.2.3-rc1
+  pull_request:
+    branches: ["main"]  # Build for testing but don't push
+
+env:
+  # === SERVICE-SPECIFIC CONFIGURATION - CHANGE THESE FOR EACH MICROSERVICE REPO ===
+  # This is the key for service in the central values.yaml file
+  # e.g., for '.auth.image.tag', this would be 'auth'
+  # e.g., for '.frontend.image.tag', this would be 'frontend'
+  SERVICE_KEY_IN_VALUES_YAML: payment
+
+  # This is the image name as it appears in the Artifact Registry (without the tag)
+  # e.g., 'papikos-auth', 'papikos-fe'
+  IMAGE_NAME_IN_REGISTRY: papikos-payment
+  # === END SERVICE-SPECIFIC CONFIGURATION ===
+
+  # --- Global Configuration (usually same across services) ---
+  REGISTRY: asia-southeast1-docker.pkg.dev
+  PROJECT_ID: belajar-kube-457207 # GCP Project ID
+  ARTIFACT_REGISTRY_REPO: papikos-repository # Artifact Registry repository name
+
+  # --- Config Repository Details ---
+  CONFIG_REPO_OWNER_SLASH_NAME: AdvProg-B15/papikos-config
+  CONFIG_REPO_VALUES_PATH: papikos-app/values.yaml # Path to values.yaml within the config repo
+
+jobs:
+  determine_version:
+    runs-on: ubuntu-latest
+    outputs:
+      release_version: ${{ steps.set_version.outputs.release_version }}
+      is_release_trigger: ${{ steps.set_version.outputs.is_release_trigger }}
+    steps:
+      - name: Determine version and release trigger
+        id: set_version
+        run: |
+          RELEASE_VERSION=""
+          IS_RELEASE_TRIGGER="false"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Trigger: workflow_dispatch"
+            if [[ -n "${{ github.event.inputs.version_tag }}" && "${{ github.event.inputs.version_tag }}" == v* ]]; then
+              RELEASE_VERSION="${{ github.event.inputs.version_tag }}"
+              IS_RELEASE_TRIGGER="true"
+              echo "Using version_tag from input: $RELEASE_VERSION"
+            else
+              echo "::error::For workflow_dispatch, 'version_tag' input is required and must start with 'v'."
+              exit 1
+            fi
+          elif [[ "${{ github.event_name }}" == "push" && "${{ startsWith(github.ref, 'refs/tags/v') }}" == "true" ]]; then
+            echo "Trigger: push tag"
+            RELEASE_VERSION="${GITHUB_REF#refs/tags/}" # e.g., v1.2.3
+            IS_RELEASE_TRIGGER="true"
+            echo "Using version_tag from Git tag: $RELEASE_VERSION"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "Trigger: pull_request. Not a release trigger."
+            # For PRs, docker/metadata-action will generate a PR-specific tag.
+          else
+            echo "Trigger: ${{ github.event_name }}. Not a release trigger."
+          fi
+
+          echo "release_version=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "is_release_trigger=${IS_RELEASE_TRIGGER}" >> $GITHUB_OUTPUT
+
+  build_and_push_image:
+    needs: determine_version
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag_with_registry: ${{ steps.meta.outputs.tags }} # Full image path + primary tag
+      image_digest: ${{ steps.build.outputs.digest }}
+      # version_from_meta is the primary tag (e.g. v1.2.3) extracted by docker/metadata-action
+      version_from_meta: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for docker/metadata-action to get tags correctly
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME_IN_REGISTRY }}
+          tags: |
+            # For release builds (tagged push or dispatch with version)
+            type=raw,value=${{ needs.determine_version.outputs.release_version }},enable=${{ needs.determine_version.outputs.is_release_trigger == 'true' }}
+            # Add 'latest' tag for release builds too if desired
+            type=raw,value=latest,enable=${{ needs.determine_version.outputs.is_release_trigger == 'true' }}
+            # For PR events: refs/pull/123/merge (generates tag like PR-123)
+            type=ref,event=pr
+          labels: |
+            org.opencontainers.image.title=${{ env.IMAGE_NAME_IN_REGISTRY }}
+            org.opencontainers.image.description=${{ env.SERVICE_KEY_IN_VALUES_YAML }} service for Papikos
+            org.opencontainers.image.version=${{ needs.determine_version.outputs.release_version }} # Use the determined release_version
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Assumes Dockerfile is in the root of this service's repo
+          platforms: linux/amd64
+          # Push only if it's a release trigger (tagged push or specific dispatch)
+          push: ${{ needs.determine_version.outputs.is_release_trigger == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Echo Docker metadata outputs (for debugging)
+        if: always()
+        run: |
+          echo "steps.meta.outputs.tags (all generated tags): ${{ steps.meta.outputs.tags }}"
+          echo "steps.meta.outputs.version (primary tag used): ${{ steps.meta.outputs.version }}"
+
+  update_config_repository:
+    needs: [determine_version, build_and_push_image]
+    runs-on: ubuntu-latest
+    # Only run on release triggers and if a version was actually determined and built
+    if: needs.determine_version.outputs.is_release_trigger == 'true' && needs.build_and_push_image.outputs.version_from_meta != ''
+    env:
+      # The tag to update in values.yaml. Use 'version_from_meta' as it's what docker/metadata-action resolved.
+      NEW_IMAGE_VERSION: ${{ needs.build_and_push_image.outputs.version_from_meta }}
+    steps:
+      - name: Checkout config repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CONFIG_REPO_OWNER_SLASH_NAME }}
+          token: ${{ secrets.CONFIG_REPO_TOKEN }} # PAT with repo scope for the config repo
+          path: config-repo
+
+      - name: Debug info for update-config
+        run: |
+          echo "Running update_config_repository job for service: ${{ env.SERVICE_KEY_IN_VALUES_YAML }}"
+          echo "New image version to apply: ${{ env.NEW_IMAGE_VERSION }}"
+          echo "Is release trigger: ${{ needs.determine_version.outputs.is_release_trigger }}"
+          if [[ -z "${{ env.NEW_IMAGE_VERSION }}" ]]; then
+            echo "::error::NEW_IMAGE_VERSION is empty. Cannot update config."
+            exit 1
+          fi
+
+      - name: Update values.yaml with yq
+        run: |
+          CONFIG_FILE_PATH="config-repo/${{ env.CONFIG_REPO_VALUES_PATH }}"
+          echo "Attempting to update: $CONFIG_FILE_PATH"
+
+          if [[ ! -f "$CONFIG_FILE_PATH" ]]; then
+            echo "::error::Config file not found at $CONFIG_FILE_PATH"
+            ls -R config-repo # List contents for debugging
+            exit 1
+          fi
+
+          echo "Installing yq..."
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+          # Create backup in the checked-out config-repo directory
+          cp "$CONFIG_FILE_PATH" "${CONFIG_FILE_PATH}.backup"
+
+          # Path in values.yaml to update, e.g., .auth.image.tag
+          YQ_PATH=".${{ env.SERVICE_KEY_IN_VALUES_YAML }}.image.tag"
+          CURRENT_TAG=$(yq eval "$YQ_PATH" "$CONFIG_FILE_PATH")
+
+          echo "=== Image Tag Update for Service: ${{ env.SERVICE_KEY_IN_VALUES_YAML }} ==="
+          echo "Path in values.yaml: $YQ_PATH"
+          echo "Current tag: $CURRENT_TAG"
+          echo "New tag: ${{ env.NEW_IMAGE_VERSION }}"
+
+          if [ "$CURRENT_TAG" = "${{ env.NEW_IMAGE_VERSION }}" ]; then
+            echo "⚠️ Tag for ${{ env.SERVICE_KEY_IN_VALUES_YAML }} is already up to date ($CURRENT_TAG)."
+            # Create a marker file in the working directory of the step
+            touch NO_YQ_CHANGES_MARKER
+          else
+            yq eval "$YQ_PATH = \"${{ env.NEW_IMAGE_VERSION }}\"" -i "$CONFIG_FILE_PATH"
+            UPDATED_TAG=$(yq eval "$YQ_PATH" "$CONFIG_FILE_PATH")
+            if [ "$UPDATED_TAG" != "${{ env.NEW_IMAGE_VERSION }}" ]; then
+              echo "::error::Failed to update tag for ${{ env.SERVICE_KEY_IN_VALUES_YAML }}! Expected: ${{ env.NEW_IMAGE_VERSION }}, Got: $UPDATED_TAG"
+              cat "$CONFIG_FILE_PATH"
+              exit 1
+            fi
+            echo "Successfully updated ${{ env.SERVICE_KEY_IN_VALUES_YAML }} service tag to: $UPDATED_TAG"
+          fi
+
+          echo "=== Updated ${{ env.SERVICE_KEY_IN_VALUES_YAML }} Service Configuration (from values.yaml) ==="
+          yq eval ".${{ env.SERVICE_KEY_IN_VALUES_YAML }}.image" "$CONFIG_FILE_PATH"
+
+          echo "=== Diff (if any) ==="
+          # Diff against the backup
+          if ! diff -u "${CONFIG_FILE_PATH}.backup" "$CONFIG_FILE_PATH"; then
+            echo "Changes detected by diff."
+          else
+            echo "No changes detected by diff."
+            if [[ ! -f NO_YQ_CHANGES_MARKER ]]; then
+              echo "Warning: No diff, but NO_YQ_CHANGES_MARKER was not set. This might indicate an issue if a change was expected."
+            fi
+          fi
+          rm "${CONFIG_FILE_PATH}.backup"
+
+
+      - name: Create Pull Request to Config Repo
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.CONFIG_REPO_TOKEN }}
+          path: config-repo # Path to the checked-out config repo
+          commit-message: "Release: Update ${{ env.SERVICE_KEY_IN_VALUES_YAML }} to ${{ env.NEW_IMAGE_VERSION }}"
+          title: "Release: Update ${{ env.SERVICE_KEY_IN_VALUES_YAML }} service to ${{ env.NEW_IMAGE_VERSION }}"
+          body: |
+            Automated PR to update the `${{ env.SERVICE_KEY_IN_VALUES_YAML }}` service to version `${{ env.NEW_IMAGE_VERSION }}`.
+
+            **Service:** `${{ env.SERVICE_KEY_IN_VALUES_YAML }}`
+            **New Version:** `${{ env.NEW_IMAGE_VERSION }}`
+
+            **Source Details:**
+            - Repository: `${{ github.repository }}`
+            - Commit: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+            - Workflow Run: [Link](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            **Image Built:**
+            `${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.IMAGE_NAME_IN_REGISTRY }}:${{ env.NEW_IMAGE_VERSION }}`
+
+            Please review and merge to deploy.
+          branch: release/${{ env.SERVICE_KEY_IN_VALUES_YAML }}-${{ env.NEW_IMAGE_VERSION }}
+          delete-branch: true
+          # peter-evans/create-pull-request will not create a PR if there are no file changes.
+          # This handles the case where NO_YQ_CHANGES_MARKER was set (or rather, yq made no changes).
+
