@@ -9,6 +9,7 @@ WORKDIR /app
 # Copy build files first to leverage Docker cache for dependencies
 COPY build.gradle settings.gradle gradlew ./
 COPY gradle ./gradle
+RUN chmod +x ./gradlew
 
 # Download dependencies. This layer is cached if build files don't change.
 # Run a task that resolves dependencies. `dependencies` task or `build` with `-x` works.
