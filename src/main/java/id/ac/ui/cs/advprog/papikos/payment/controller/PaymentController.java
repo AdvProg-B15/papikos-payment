@@ -79,7 +79,7 @@ public class PaymentController {
         return ResponseEntity.ok(balanceDto);
     }
 
-    @GetMapping("/history")
+    @GetMapping("/transactions")
     public ResponseEntity<Page<TransactionDto>> getMyTransactionHistory(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
