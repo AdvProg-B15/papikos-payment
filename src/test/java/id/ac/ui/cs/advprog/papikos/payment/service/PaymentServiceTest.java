@@ -1,6 +1,5 @@
 package id.ac.ui.cs.advprog.papikos.payment.service;
 
-import id.ac.ui.cs.advprog.papikos.payment.client.AuthServiceClient; // Mock interface
 import id.ac.ui.cs.advprog.papikos.payment.client.RentalServiceClient; // Mock interface
 import id.ac.ui.cs.advprog.papikos.payment.dto.*;
 import id.ac.ui.cs.advprog.papikos.payment.entity.Transaction;
