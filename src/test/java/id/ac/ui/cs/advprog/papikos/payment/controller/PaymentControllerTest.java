@@ -4,12 +4,8 @@
 //import id.ac.ui.cs.advprog.papikos.payment.dto.*;
 //import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionStatus;
 //import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
-//import id.ac.ui.cs.advprog.papikos.payment.exception.InsufficientBalanceException;
-//import id.ac.ui.cs.advprog.papikos.payment.exception.InvalidOperationException;
-//import id.ac.ui.cs.advprog.papikos.payment.exception.ResourceNotFoundException;
 //import id.ac.ui.cs.advprog.papikos.payment.service.PaymentService;
 //import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.DisplayName;
 //import org.junit.jupiter.api.Test;
 //import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,264 +15,216 @@
 //import org.springframework.data.domain.PageRequest;
 //import org.springframework.data.domain.Pageable;
 //import org.springframework.http.MediaType;
-//import org.springframework.security.test.context.support.WithMockUser;
+//import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+//import org.springframework.security.core.Authentication;
 //import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 //import org.springframework.test.web.servlet.MockMvc;
 //import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 //import org.springframework.web.context.WebApplicationContext;
 //
-//import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 //
 //import java.math.BigDecimal;
+//import java.time.LocalDate;
 //import java.time.LocalDateTime;
-//import java.util.List;
+//import java.util.Collections;
 //import java.util.UUID;
 //
-//import static org.hamcrest.Matchers.*;
 //import static org.mockito.ArgumentMatchers.any;
 //import static org.mockito.ArgumentMatchers.eq;
-//import static org.mockito.Mockito.verify;
 //import static org.mockito.Mockito.when;
-//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+//import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 //import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 //
-//@WebMvcTest(PaymentController.class)
+//@WebMvcTest(PaymentController.class) // Test only the PaymentController layer
 //class PaymentControllerTest {
 //
-//    @Autowired private MockMvc mockMvc;
-//    @MockBean private PaymentService paymentService;
-//    @Autowired private ObjectMapper objectMapper;
-//    @Autowired private WebApplicationContext context;
+//    @Autowired
+//    private MockMvc mockMvc;
 //
-//    // Define test UUIDs
-//    private final UUID MOCK_USER_ID = UUID.fromString("a1b7a39a-8f8f-4f19-a5e3-8d9c1b8a9b5a");
-//    private final UUID RENTAL_ID = UUID.fromString("c1d9b54c-1e1e-4c20-b6f4-9e0d2c9b0c6b");
-//    private final UUID TRANSACTION_ID = UUID.fromString("d2e0c65d-2f2f-6d31-c7g6-0f1e3d0c1d7d");
-//    private final UUID MOCK_OWNER_ID = UUID.fromString("b2c8b40b-9g9g-5g20-a6f5-7e0c2b7a8a4b");
+//    @MockBean // Mocks the PaymentService dependency
+//    private PaymentService paymentService;
 //
-//    private final BigDecimal TOPUP_AMOUNT = new BigDecimal("100.00");
-//    private final BigDecimal PAYMENT_AMOUNT = new BigDecimal("500.00");
+//    @Autowired
+//    private ObjectMapper objectMapper; // For converting objects to JSON strings
 //
-//    // Setup MockMvc with Spring Security context support
+//    @Autowired
+//    private WebApplicationContext context;
+//
+//
+//    private UUID testUserId;
+//    private Authentication mockAuthentication;
+//
 //    @BeforeEach
-//    public void setup() {
+//    void setUp() {
+//        // Set up MockMvc to use Spring Security context
+//        // This is important for SecurityMockMvcRequestPostProcessors.authentication to work
+//        // if your SecurityConfig was more complex. For now, might not be strictly needed if SecurityConfig is permitAll for tests.
+//        // However, it's good practice.
 //        mockMvc = MockMvcBuilders
 //                .webAppContextSetup(context)
-//                .apply(springSecurity())
+//                .apply(springSecurity()) // Apply Spring Security test support
 //                .build();
+//
+//
+//        testUserId = UUID.randomUUID();
+//        // Create a mock Authentication object. The 'name' will be used by getUserIdFromAuthentication.
+//        mockAuthentication = new UsernamePasswordAuthenticationToken(testUserId.toString(), null, Collections.emptyList());
+//    }
+//
+//    private TransactionDto createMockTransactionDto(UUID userId, BigDecimal amount, TransactionType type) {
+//        return new TransactionDto(
+//                UUID.randomUUID(), userId, type, amount, TransactionStatus.COMPLETED,
+//                UUID.randomUUID(), userId, UUID.randomUUID(), "Mock notes",
+//                LocalDateTime.now(), LocalDateTime.now()
+//        );
+//    }
+//
+//
+//    @Test
+//    void topUp_whenValidRequest_shouldReturnOkAndTransactionDto() throws Exception {
+//        TopUpRequest topUpRequest = new TopUpRequest(new BigDecimal("100.00"));
+//        TransactionDto mockTransactionDto = createMockTransactionDto(testUserId, topUpRequest.amount(), TransactionType.TOPUP);
+//
+//        when(paymentService.topUp(eq(testUserId), any(TopUpRequest.class))).thenReturn(mockTransactionDto);
+//
+//        mockMvc.perform(post("/api/v1/payment/topup")
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(mockAuthentication)) // Provide Authentication
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(objectMapper.writeValueAsString(topUpRequest)))
+//                .andExpect(status().isOk())
+//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+//                .andExpect(jsonPath("$.userId").value(testUserId.toString()))
+//                .andExpect(jsonPath("$.amount").value(topUpRequest.amount().doubleValue()))
+//                .andExpect(jsonPath("$.transactionType").value(TransactionType.TOPUP.toString()));
 //    }
 //
 //    @Test
-//    @DisplayName("POST /payments/topup/initiate - Success (Immediate Completion)")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"})
-//    void initiateAndCompleteTopUp_Success() throws Exception {
-//        TopUpRequest request = new TopUpRequest(TOPUP_AMOUNT);
+//    void topUp_whenAuthenticationNameIsInvalidUuid_shouldBeHandledByGlobalExceptionHandler() throws Exception {
+//        TopUpRequest topUpRequest = new TopUpRequest(new BigDecimal("100.00"));
+//        Authentication invalidAuth = new UsernamePasswordAuthenticationToken("not-a-uuid", null, Collections.emptyList());
 //
-//        TransactionDto completedTransactionDto = new TransactionDto(
-//                TRANSACTION_ID,
-//                MOCK_USER_ID,
-//                TransactionType.TOPUP,
-//                TOPUP_AMOUNT,
-//                TransactionStatus.COMPLETED,
-//                null,
-//                null,
-//                null,
-//                "Internal top-up completed automatically.",
-//                LocalDateTime.now(),
-//                LocalDateTime.now()
+//        // We expect an IllegalArgumentException from getUserIdFromAuthentication,
+//        // which should be caught by GlobalExceptionHandler and turned into a 400 or 500 response.
+//        // Let's assume GlobalExceptionHandler turns IllegalArgumentException into 400.
+//        // If not, this might be 500.
+//        mockMvc.perform(post("/api/v1/payment/topup")
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(invalidAuth))
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(objectMapper.writeValueAsString(topUpRequest)))
+//                .andExpect(status().isBadRequest()); // Or .isInternalServerError() if that's how it's handled
+//    }
+//
+//    @Test
+//    void topUp_whenAuthenticationIsNull_shouldBeHandledByGlobalExceptionHandler() throws Exception {
+//        TopUpRequest topUpRequest = new TopUpRequest(new BigDecimal("100.00"));
+//        // Note: Providing null directly to .with(authentication(null)) might not work as expected.
+//        // The controller method signature is `Authentication authentication` not `@AuthenticationPrincipal`.
+//        // If Spring Security context is empty, `authentication` argument might be null or an AnonymousAuthenticationToken.
+//        // Let's test the case where the Authentication object itself is null when passed to getUserIdFromAuthentication.
+//        // This is harder to simulate directly with MockMvc for a method argument if it's not @AuthenticationPrincipal.
+//        // The most direct test for getUserIdFromAuthentication(null) would be a direct unit test of that method.
+//        // For controller behavior, if no auth is provided AND security allows, `authentication` arg might be null.
+//        // If security enforces auth, it would be a 401/403 before controller method.
+//
+//        // This test assumes a scenario where Spring MVC somehow injects a null Authentication object.
+//        // A more realistic scenario is testing getUserIdFromAuthentication itself or relying on security filter behavior.
+//        // For this to work, the controller method needs to be callable without full security enforcement leading to an early 401/403.
+//        // We can't directly make MockMvc pass null for the `Authentication authentication` parameter easily if it's not from `@AuthenticationPrincipal`.
+//        // The private method test is more suitable for this.
+//        // Let's assume the controller test ensures that if getUserId throws, GlobalExceptionHandler handles it.
+//        // The previous test `topUp_whenAuthenticationNameIsInvalidUuid` already covers that an exception from getUserId is handled.
+//        // If authentication is null, it will throw IllegalStateException.
+//        Authentication nullNameAuth = new UsernamePasswordAuthenticationToken(null, null, Collections.emptyList());
+//
+//        mockMvc.perform(post("/api/v1/payment/topup")
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(nullNameAuth)) // Simulates auth obj with null name
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(objectMapper.writeValueAsString(topUpRequest)))
+//                .andExpect(status().isBadRequest()); // Or .isInternalServerError() depending on GlobalExceptionHandler
+//    }
+//
+//
+//    @Test
+//    void payForRental_whenValidRequest_shouldReturnOkAndTransactionDto() throws Exception {
+//        PaymentRequest paymentRequest = new PaymentRequest(UUID.randomUUID(), new BigDecimal("200.00"));
+//        TransactionDto mockTransactionDto = createMockTransactionDto(testUserId, paymentRequest.amount(), TransactionType.PAYMENT);
+//        mockTransactionDto = new TransactionDto( // more specific mock
+//                mockTransactionDto.transactionId(), testUserId, TransactionType.PAYMENT, paymentRequest.amount(),
+//                TransactionStatus.COMPLETED, paymentRequest.rentalId(), testUserId, UUID.randomUUID(),
+//                "Mock rental payment", LocalDateTime.now(), LocalDateTime.now()
 //        );
 //
-//        when(paymentService.topUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
-//                .thenReturn(completedTransactionDto);
 //
-//        mockMvc.perform(post("/api/v1/payments/topup/initiate")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
+//        when(paymentService.payForRental(eq(testUserId), any(PaymentRequest.class))).thenReturn(mockTransactionDto);
+//
+//        mockMvc.perform(post("/api/v1/payment/pay")
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(mockAuthentication))
 //                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
+//                        .content(objectMapper.writeValueAsString(paymentRequest)))
 //                .andExpect(status().isOk())
-//                // Assert fields from the TransactionDto
-//                .andExpect(jsonPath("$.transactionId", is(TRANSACTION_ID.toString())))
-//                .andExpect(jsonPath("$.userId", is(MOCK_USER_ID.toString())))
-//                .andExpect(jsonPath("$.transactionType", is(TransactionType.TOPUP.toString())))
-//                .andExpect(jsonPath("$.amount", is(TOPUP_AMOUNT.doubleValue())))
-//                .andExpect(jsonPath("$.status", is(TransactionStatus.COMPLETED.toString())));
-//
-//        verify(paymentService).topUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
+//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+//                .andExpect(jsonPath("$.userId").value(testUserId.toString()))
+//                .andExpect(jsonPath("$.amount").value(paymentRequest.amount().doubleValue()))
+//                .andExpect(jsonPath("$.transactionType").value(TransactionType.PAYMENT.toString()))
+//                .andExpect(jsonPath("$.relatedRentalId").value(paymentRequest.rentalId().toString()));
 //    }
 //
 //    @Test
-//    @DisplayName("POST /payments/topup/initiate - Invalid Amount")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"})
-//    void initiateAndCompleteTopUp_InvalidAmount() throws Exception {
-//        TopUpRequest request = new TopUpRequest(BigDecimal.ZERO);
+//    void getMyBalance_shouldReturnOkAndBalanceDto() throws Exception {
+//        BalanceDto mockBalanceDto = new BalanceDto(testUserId, new BigDecimal("500.00"), LocalDateTime.now());
+//        when(paymentService.getUserBalance(eq(testUserId))).thenReturn(mockBalanceDto);
 //
-//
-//        when(paymentService.topUp(eq(MOCK_USER_ID), any(TopUpRequest.class)))
-//                .thenThrow(new InvalidOperationException("Amount must be positive"));
-//
-//        mockMvc.perform(post("/api/v1/payments/topup/initiate")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isBadRequest())
-//                .andExpect(jsonPath("$.message", containsString("Amount must be positive")));
-//
-//
-//        verify(paymentService).topUp(eq(MOCK_USER_ID), any(TopUpRequest.class));
-//    }
-//
-//    @Test
-//    @DisplayName("POST /payments/pay - Success")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"})
-//    void payForRental_Success() throws Exception {
-//        // Request DTO uses UUID
-//        PaymentRequest request = new PaymentRequest(RENTAL_ID, PAYMENT_AMOUNT);
-//        // Response DTO uses UUIDs
-//        TransactionDto responseDto = new TransactionDto(
-//                TRANSACTION_ID, MOCK_USER_ID, TransactionType.PAYMENT, PAYMENT_AMOUNT, TransactionStatus.COMPLETED,
-//                RENTAL_ID, MOCK_USER_ID, MOCK_OWNER_ID, // Payer, Payee UUIDs
-//                null, LocalDateTime.now(), LocalDateTime.now()
-//        );
-//
-//        // Mock service call with specific UUID
-//        when(paymentService.payForRental(eq(MOCK_USER_ID), any(PaymentRequest.class))).thenReturn(responseDto);
-//
-//        mockMvc.perform(post("/api/v1/payments/pay")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
+//        mockMvc.perform(get("/api/v1/payment/balance")
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(mockAuthentication)))
 //                .andExpect(status().isOk())
-//                // Assert UUIDs as strings in JSON path
-//                .andExpect(jsonPath("$.transactionId", is(TRANSACTION_ID.toString())))
-//                .andExpect(jsonPath("$.userId", is(MOCK_USER_ID.toString())))
-//                .andExpect(jsonPath("$.relatedRentalId", is(RENTAL_ID.toString())))
-//                .andExpect(jsonPath("$.payerUserId", is(MOCK_USER_ID.toString())))
-//                .andExpect(jsonPath("$.payeeUserId", is(MOCK_OWNER_ID.toString())))
-//                .andExpect(jsonPath("$.status", is("COMPLETED")));
-//
-//        // Verify service call with specific UUID
-//        verify(paymentService).payForRental(eq(MOCK_USER_ID), any(PaymentRequest.class));
+//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+//                .andExpect(jsonPath("$.userId").value(testUserId.toString()))
+//                .andExpect(jsonPath("$.balance").value(mockBalanceDto.balance().doubleValue()));
 //    }
 //
 //    @Test
-//    @DisplayName("POST /payments/pay - Insufficient Balance")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"})
-//    void payForRental_InsufficientBalance() throws Exception {
-//        PaymentRequest request = new PaymentRequest(RENTAL_ID, PAYMENT_AMOUNT); // Uses UUID
+//    void getMyTransactionHistory_noFilters_shouldReturnOkAndPageOfTransactionDto() throws Exception {
+//        Pageable pageable = PageRequest.of(0, 10);
+//        TransactionDto mockTxDto = createMockTransactionDto(testUserId, new BigDecimal("10.00"), TransactionType.TOPUP);
+//        Page<TransactionDto> mockPage = new PageImpl<>(Collections.singletonList(mockTxDto), pageable, 1);
 //
-//        // Mock service call with specific UUID to throw exception
-//        when(paymentService.payForRental(eq(MOCK_USER_ID), any(PaymentRequest.class)))
-//                .thenThrow(new InsufficientBalanceException("Not enough funds"));
+//        when(paymentService.getTransactionHistory(eq(testUserId), eq(null), eq(null), eq(null), any(Pageable.class)))
+//                .thenReturn(mockPage);
 //
-//        mockMvc.perform(post("/api/v1/payments/pay")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isBadRequest()) // Mapped by GlobalExceptionHandler
-//                .andExpect(jsonPath("$.message", containsString("Not enough funds")));
-//
-//        verify(paymentService).payForRental(eq(MOCK_USER_ID), any(PaymentRequest.class)); // Verify with UUID
-//    }
-//
-//    @Test
-//    @DisplayName("POST /payments/pay - Rental Not Found")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"})
-//    void payForRental_RentalNotFound() throws Exception {
-//        PaymentRequest request = new PaymentRequest(RENTAL_ID, PAYMENT_AMOUNT); // Uses UUID
-//
-//        // Mock service call with specific UUID to throw exception
-//        when(paymentService.payForRental(eq(MOCK_USER_ID), any(PaymentRequest.class)))
-//                .thenThrow(new ResourceNotFoundException("Rental not found"));
-//
-//        mockMvc.perform(post("/api/v1/payments/pay")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(request)))
-//                .andExpect(status().isNotFound()); // Mapped by GlobalExceptionHandler
-//
-//        verify(paymentService).payForRental(eq(MOCK_USER_ID), any(PaymentRequest.class)); // Verify with UUID
-//    }
-//
-//    @Test
-//    @DisplayName("GET /payments/balance - Success")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"}) // Or OWNER
-//    void getMyBalance_Success() throws Exception {
-//        // DTO uses UUID
-//        BalanceDto balanceDto = new BalanceDto(MOCK_USER_ID, new BigDecimal("123.45"), LocalDateTime.now());
-//        // Mock service call with specific UUID
-//        when(paymentService.getUserBalance(eq(MOCK_USER_ID))).thenReturn(balanceDto);
-//
-//        mockMvc.perform(get("/api/v1/payments/balance")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString()))))
-//                .andExpect(status().isOk())
-//                // Assert UUID as string in JSON path
-//                .andExpect(jsonPath("$.userId", is(MOCK_USER_ID.toString())))
-//                .andExpect(jsonPath("$.balance", is(123.45)));
-//
-//        // Verify service call with specific UUID
-//        verify(paymentService).getUserBalance(eq(MOCK_USER_ID));
-//    }
-//
-//    @Test
-//    @DisplayName("GET /payments/history - Success")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"}) // Or OWNER
-//    void getMyTransactionHistory_Success() throws Exception {
-//        // DTO uses UUIDs
-//        TransactionDto txDto = new TransactionDto(
-//                TRANSACTION_ID, MOCK_USER_ID, TransactionType.TOPUP, BigDecimal.TEN, TransactionStatus.COMPLETED,
-//                null, null, null, null, LocalDateTime.now(), LocalDateTime.now()
-//        );
-//        Page<TransactionDto> page = new PageImpl<>(List.of(txDto), PageRequest.of(0, 10), 1);
-//
-//        // Mock service call with specific UUID and Pageable
-//        when(paymentService.getTransactionHistory(eq(MOCK_USER_ID), eq(null), eq(null), eq(null), any(Pageable.class)))
-//                .thenReturn(page);
-//
-//        mockMvc.perform(get("/api/v1/payments/history")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
+//        mockMvc.perform(get("/api/v1/payment/history")
 //                        .param("page", "0")
-//                        .param("size", "10"))
+//                        .param("size", "10")
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(mockAuthentication)))
 //                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.content", hasSize(1)))
-//                // Assert UUID as string in JSON path
-//                .andExpect(jsonPath("$.content[0].transactionId", is(TRANSACTION_ID.toString())))
-//                .andExpect(jsonPath("$.totalElements", is(1)));
-//
-//        // Verify service call with specific UUID
-//        verify(paymentService).getTransactionHistory(eq(MOCK_USER_ID), eq(null), eq(null), eq(null), any(Pageable.class));
+//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+//                .andExpect(jsonPath("$.content[0].userId").value(testUserId.toString()))
+//                .andExpect(jsonPath("$.totalElements").value(1));
 //    }
 //
 //    @Test
-//    @DisplayName("GET /payments/history - With Filters")
-//    @WithMockUser(username = "test-user", roles = {"TENANT"})
-//    void getMyTransactionHistory_WithFilters() throws Exception {
-//        // DTO uses UUIDs
-//        TransactionDto txDto = new TransactionDto(
-//                TRANSACTION_ID, MOCK_USER_ID, TransactionType.PAYMENT, BigDecimal.ONE, TransactionStatus.COMPLETED,
-//                RENTAL_ID, MOCK_USER_ID, MOCK_OWNER_ID, null, LocalDateTime.now(), LocalDateTime.now()
-//        );
-//        Page<TransactionDto> page = new PageImpl<>(List.of(txDto), PageRequest.of(0, 5), 1);
+//    void getMyTransactionHistory_withFilters_shouldReturnOkAndPageOfTransactionDto() throws Exception {
+//        Pageable pageable = PageRequest.of(0, 5);
+//        LocalDate startDate = LocalDate.of(2023, 1, 1);
+//        LocalDate endDate = LocalDate.of(2023, 1, 31);
+//        TransactionType type = TransactionType.PAYMENT;
+//        TransactionDto mockTxDto = createMockTransactionDto(testUserId, new BigDecimal("10.00"), TransactionType.PAYMENT);
+//        Page<TransactionDto> mockPage = new PageImpl<>(Collections.singletonList(mockTxDto), pageable, 1);
 //
-//        // Mock service call with specific UUID and filters
-//        when(paymentService.getTransactionHistory(eq(MOCK_USER_ID), any(), any(), eq(TransactionType.PAYMENT), any(Pageable.class)))
-//                .thenReturn(page);
+//        when(paymentService.getTransactionHistory(eq(testUserId), eq(startDate), eq(endDate), eq(type), any(Pageable.class)))
+//                .thenReturn(mockPage);
 //
-//        mockMvc.perform(get("/api/v1/payments/history")
-//                        .with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(MOCK_USER_ID.toString())))
+//        mockMvc.perform(get("/api/v1/payment/history")
+//                        .param("startDate", "2023-01-01")
+//                        .param("endDate", "2023-01-31")
+//                        .param("type", "PAYMENT")
 //                        .param("page", "0")
 //                        .param("size", "5")
-//                        .param("type", "PAYMENT")
-//                        .param("startDate", "2023-01-01")
-//                        .param("endDate", "2023-12-31"))
+//                        .with(SecurityMockMvcRequestPostProcessors.authentication(mockAuthentication)))
 //                .andExpect(status().isOk())
-//                .andExpect(jsonPath("$.content", hasSize(1)))
-//                // Assert UUID as string
-//                .andExpect(jsonPath("$.content[0].transactionId", is(TRANSACTION_ID.toString())))
-//                .andExpect(jsonPath("$.content[0].transactionType", is("PAYMENT")))
-//                .andExpect(jsonPath("$.totalElements", is(1)));
-//
-//        // Verify service call with specific UUID and filters
-//        verify(paymentService).getTransactionHistory(eq(MOCK_USER_ID), any(), any(), eq(TransactionType.PAYMENT), any(Pageable.class));
+//                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+//                .andExpect(jsonPath("$.content[0].transactionType").value(TransactionType.PAYMENT.toString()))
+//                .andExpect(jsonPath("$.totalElements").value(1));
 //    }
 //}
-//
