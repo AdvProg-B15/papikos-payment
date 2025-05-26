@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -32,11 +33,8 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-//                                .requestMatchers(HttpMethod.POST, "/api/v1/payment/topup").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
-//                                .requestMatchers(HttpMethod.POST, "/api/v1/payment/pay").permitAll()
-//                                .requestMatchers(HttpMethod.GET, "/api/v1/payment/balance").permitAll()
-//                                .requestMatchers(HttpMethod.GET, "/api/v1/payment/history").permitAll()
+                                .requestMatchers(new AntPathRequestMatcher("/error")).permitAll() // <--- ADD THIS LINE
                                 // All other requests must be authenticated
                                 .anyRequest().authenticated()
                 )
