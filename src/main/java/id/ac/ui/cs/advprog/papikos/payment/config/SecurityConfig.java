@@ -32,11 +32,11 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers(HttpMethod.POST, "/api/v1/payment/topup").permitAll()
+//                                .requestMatchers(HttpMethod.POST, "/api/v1/payment/topup").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/v1/payment/pay").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/v1/payment/balance").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/v1/payment/history").permitAll()
+//                                .requestMatchers(HttpMethod.POST, "/api/v1/payment/pay").permitAll()
+//                                .requestMatchers(HttpMethod.GET, "/api/v1/payment/balance").permitAll()
+//                                .requestMatchers(HttpMethod.GET, "/api/v1/payment/history").permitAll()
                                 // All other requests must be authenticated
                                 .anyRequest().authenticated()
                 )
