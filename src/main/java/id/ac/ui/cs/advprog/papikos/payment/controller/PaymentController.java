@@ -2,6 +2,7 @@ package id.ac.ui.cs.advprog.papikos.payment.controller;
 
 import id.ac.ui.cs.advprog.papikos.payment.dto.*;
 import id.ac.ui.cs.advprog.papikos.payment.entity.TransactionType;
+import id.ac.ui.cs.advprog.papikos.payment.response.ApiResponse;
 import id.ac.ui.cs.advprog.papikos.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication; // Import Authentication
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,7 +47,7 @@ public class PaymentController {
     }
 
     @PostMapping("/topup")
-    public ResponseEntity<TransactionDto> topUp(
+    public ApiResponse<TransactionDto> topUp(
             @Valid @RequestBody TopUpRequest request,
             Authentication authentication // Changed from Jwt to Authentication
     ) {
@@ -54,11 +56,15 @@ public class PaymentController {
         log.info("API: Received top-up initiation request for userId: {} with amount {}", userId, request.amount());
         TransactionDto completedTransaction = paymentService.topUp(userId, request);
         log.info("API: Top-Up successful for userId: {} TransactionId {}", userId, completedTransaction.transactionId());
-        return ResponseEntity.ok(completedTransaction);
+        return ApiResponse.<TransactionDto>builder()
+                .status(HttpStatus.OK)
+                .message("Payment successful")
+                .data(completedTransaction)
+                .build();
     }
 
     @PostMapping("/pay")
-    public ResponseEntity<TransactionDto> payForRental(
+    public ApiResponse<TransactionDto> payForRental(
             @Valid @RequestBody PaymentRequest request,
            Authentication authentication // Changed from Jwt to Authentication
     ) {
@@ -66,21 +72,30 @@ public class PaymentController {
         log.info("API: Received payment request for rentalId: {} from userId: {}", request.rentalId(), userId);
         TransactionDto transactionDto = paymentService.payForRental(userId, request);
         log.info("API: Payment successful for rentalId: {}. TransactionId: {}", request.rentalId(), transactionDto.transactionId());
-        return ResponseEntity.ok(transactionDto);
+        return ApiResponse.<TransactionDto>builder()
+                .status(HttpStatus.OK)
+                .message("Payment successful")
+                .data(transactionDto)
+                .build();
     }
 
     @GetMapping("/balance")
-    public ResponseEntity<BalanceDto> getMyBalance(
+    public ApiResponse<BalanceDto> getMyBalance(
             Authentication authentication // Changed from Jwt to Authentication
     ) {
         UUID userId = getUserIdFromAuthentication(authentication); // Use the new method
         log.info("API: Received balance request for userId: {}", userId);
         BalanceDto balanceDto = paymentService.getUserBalance(userId);
-        return ResponseEntity.ok(balanceDto);
+        return ApiResponse.<BalanceDto>builder()
+                .status(HttpStatus.OK)
+                .message("Payment successful")
+                .data(balanceDto)
+                .build();
+
     }
 
     @GetMapping("/transactions")
-    public ResponseEntity<Page<TransactionDto>> getMyTransactionHistory(
+    public ApiResponse<Page<TransactionDto>> getMyTransactionHistory(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) TransactionType type,
@@ -91,6 +106,10 @@ public class PaymentController {
         log.info("API: Received transaction history request for userId: {} with params - Start: {}, End: {}, Type: {}, Page: {}",
                 userId, startDate, endDate, type, pageable);
         Page<TransactionDto> historyPage = paymentService.getTransactionHistory(userId, startDate, endDate, type, pageable);
-        return ResponseEntity.ok(historyPage);
+        return ApiResponse.<Page<TransactionDto>>builder()
+                .status(HttpStatus.OK)
+                .message("Transaction history retrieved successfully")
+                .data(historyPage)
+                .build();
     }
 }
