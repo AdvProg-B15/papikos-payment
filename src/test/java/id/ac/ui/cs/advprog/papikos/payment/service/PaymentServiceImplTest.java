@@ -226,7 +226,7 @@ class PaymentServiceImplTest {
 
         Transaction payerTxMock = createFullPaymentTransaction(UUID.randomUUID(), userId, rentPrice, TransactionType.PAYMENT, TransactionStatus.COMPLETED, rentalId, userId, ownerId, "Payment sent for rental " + rentalId);
 
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
         when(userBalanceRepository.findByUserIdWithLock(userId)).thenReturn(Optional.of(tenantBalance));
         when(userBalanceRepository.findByUserIdWithLock(ownerId)).thenReturn(Optional.of(ownerBalance));
 
@@ -274,7 +274,7 @@ class PaymentServiceImplTest {
         UserBalance ownerBalance = new UserBalance(ownerId, new BigDecimal("100.00"));
         UserBalance createdPayerBalance = new UserBalance(userId, BigDecimal.ZERO); // Payer starts at zero
 
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
         // Payer balance interactions
         when(userBalanceRepository.findByUserIdWithLock(userId))
                 .thenReturn(Optional.empty()) // Not found first for payer
@@ -297,7 +297,7 @@ class PaymentServiceImplTest {
     @Test
     void payForRental_rentalServiceReturnsNull_throwsPaymentProcessingException() {
         PaymentRequest request = new PaymentRequest(rentalId, new BigDecimal("100.00"));
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(null);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(null);
 
         assertThrows(PaymentProcessingException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -305,7 +305,7 @@ class PaymentServiceImplTest {
     @Test
     void payForRental_rentalServiceThrowsResourceNotFound_rethrowsException() {
         PaymentRequest request = new PaymentRequest(rentalId, new BigDecimal("100.00"));
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenThrow(new ResourceNotFoundException("Rental not found"));
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenThrow(new ResourceNotFoundException("Rental not found"));
 
         assertThrows(ResourceNotFoundException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -313,7 +313,7 @@ class PaymentServiceImplTest {
     @Test
     void payForRental_rentalServiceThrowsOtherException_throwsPaymentProcessingException() {
         PaymentRequest request = new PaymentRequest(rentalId, new BigDecimal("100.00"));
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenThrow(new RuntimeException("Network error"));
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenThrow(new RuntimeException("Network error"));
 
         assertThrows(PaymentProcessingException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -323,7 +323,7 @@ class PaymentServiceImplTest {
         BigDecimal rentPrice = new BigDecimal("100.00");
         PaymentRequest request = new PaymentRequest(rentalId, rentPrice);
         RentalDetailsDto rentalDetails = createMockRentalDetails(rentalId, UUID.randomUUID(), ownerId, "APPROVED", rentPrice);
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
 
         assertThrows(InvalidOperationException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -333,7 +333,7 @@ class PaymentServiceImplTest {
         BigDecimal rentPrice = new BigDecimal("100.00");
         PaymentRequest request = new PaymentRequest(rentalId, rentPrice);
         RentalDetailsDto rentalDetails = createMockRentalDetails(rentalId, userId, ownerId, "PENDING", rentPrice);
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
 
         assertThrows(InvalidOperationException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -342,7 +342,7 @@ class PaymentServiceImplTest {
     void payForRental_amountMismatch_throwsInvalidOperationException() {
         PaymentRequest request = new PaymentRequest(rentalId, new BigDecimal("150.00"));
         RentalDetailsDto rentalDetails = createMockRentalDetails(rentalId, userId, ownerId, "APPROVED", new BigDecimal("100.00"));
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
 
         assertThrows(InvalidOperationException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -351,7 +351,7 @@ class PaymentServiceImplTest {
     void payForRental_amountNullInRequest_throwsInvalidOperationException() {
         PaymentRequest request = new PaymentRequest(rentalId, null);
         RentalDetailsDto rentalDetails = createMockRentalDetails(rentalId, userId, ownerId, "APPROVED", new BigDecimal("100.00"));
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
 
         assertThrows(InvalidOperationException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -360,7 +360,7 @@ class PaymentServiceImplTest {
     void payForRental_rentPriceNullInDetails_throwsInvalidOperationException() {
         PaymentRequest request = new PaymentRequest(rentalId, new BigDecimal("100.00"));
         RentalDetailsDto rentalDetails = createMockRentalDetails(rentalId, userId, ownerId, "APPROVED", null);
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
 
         assertThrows(InvalidOperationException.class, () -> paymentService.payForRental(userId, request));
     }
@@ -373,7 +373,7 @@ class PaymentServiceImplTest {
         UserBalance tenantBalance = new UserBalance(userId, new BigDecimal("500.00"));
         UserBalance ownerBalance = new UserBalance(ownerId, new BigDecimal("100.00"));
 
-        when(rentalServiceClient.getRentalDetailsForPayment(rentalId)).thenReturn(rentalDetails);
+        when(rentalServiceClient.getRentalDetailsForPayment(String.valueOf(rentalId))).thenReturn(rentalDetails);
         when(userBalanceRepository.findByUserIdWithLock(userId)).thenReturn(Optional.of(tenantBalance));
         when(userBalanceRepository.findByUserIdWithLock(ownerId)).thenReturn(Optional.of(ownerBalance));
 
@@ -397,7 +397,7 @@ class PaymentServiceImplTest {
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        assertEquals(sampleTransaction.getTransactionId(), result.getContent().get(0).transactionId());
+        assertEquals(sampleTransaction.getTransactionId(), result.getContent().getFirst().transactionId());
         verify(transactionRepository).findByUserIdOrderByCreatedAtDesc(userId, pageable);
         verify(transactionRepository, never()).findUserTransactionsByFilter(any(), any(), any(), any(), any());
     }

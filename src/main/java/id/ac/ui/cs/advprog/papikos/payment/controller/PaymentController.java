@@ -23,11 +23,15 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/payment")
-@RequiredArgsConstructor
 @Slf4j
 public class PaymentController {
 
     private final PaymentService paymentService;
+
+    // Constructor injection for PaymentService
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
 
     // Use your friend's method
     private UUID getUserIdFromAuthentication(Authentication authentication) {

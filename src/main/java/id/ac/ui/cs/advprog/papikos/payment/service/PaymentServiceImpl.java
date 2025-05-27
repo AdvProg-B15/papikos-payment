@@ -107,7 +107,7 @@ public class PaymentServiceImpl implements PaymentService {
         RentalDetailsDto rental;
         try {
             log.debug("Fetching rental details for rentalId: {}", request.rentalId());
-            rental = rentalServiceClient.getRentalDetailsForPayment(request.rentalId());
+            rental = rentalServiceClient.getRentalDetailsForPayment(String.valueOf(request.rentalId()));
             if (rental == null) {
                 throw new PaymentProcessingException("Received null rental details for rentalId: " + request.rentalId());
             }

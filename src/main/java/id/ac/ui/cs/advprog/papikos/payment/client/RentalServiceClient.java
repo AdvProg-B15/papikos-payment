@@ -4,6 +4,7 @@ import id.ac.ui.cs.advprog.papikos.payment.dto.RentalDetailsDto; // Assuming thi
 import id.ac.ui.cs.advprog.papikos.payment.exception.ResourceNotFoundException;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.UUID;
 
@@ -11,6 +12,6 @@ import java.util.UUID;
 public interface RentalServiceClient {
 
     @GetMapping("/api/v1/rentals/{rentalId}")
-    RentalDetailsDto getRentalDetailsForPayment(UUID rentalId) throws ResourceNotFoundException;
+    RentalDetailsDto getRentalDetailsForPayment(@PathVariable String rentalId) throws ResourceNotFoundException;
 
 }
