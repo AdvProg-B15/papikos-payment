@@ -107,7 +107,7 @@ public class PaymentServiceImpl implements PaymentService {
         RentalDetailsDto rental;
         try {
             log.debug("Fetching rental details for rentalId: {}", request.rentalId());
-            rental = rentalServiceClient.getRentalDetailsForPayment(String.valueOf(request.rentalId()));
+            rental = rentalServiceClient.getRentalDetailsForPayment(String.valueOf(request.rentalId())).getData();
             if (rental == null) {
                 throw new PaymentProcessingException("Received null rental details for rentalId: " + request.rentalId());
             }
@@ -128,10 +128,6 @@ public class PaymentServiceImpl implements PaymentService {
         if (!"APPROVED".equalsIgnoreCase(rental.getStatus()) && !"ACTIVE".equalsIgnoreCase(rental.getStatus())) {
             log.warn("Payment failed: Rental {} is not in APPROVED or ACTIVE state (status: {}).", request.rentalId(), rental.getStatus());
             throw new InvalidOperationException("Rental is not approved or active for payment.");
-        }
-        if (rental.getMonthlyRentPrice() == null || request.amount() == null || rental.getMonthlyRentPrice().compareTo(request.amount()) != 0) {
-            log.warn("Payment amount mismatch for rental {}. Expected: {}, Received: {}", request.rentalId(), rental.getMonthlyRentPrice(), request.amount());
-            throw new InvalidOperationException("Payment amount does not match the expected rental price.");
         }
 
         UUID ownerUserId = rental.getOwnerUserId();
