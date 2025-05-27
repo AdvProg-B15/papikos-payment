@@ -33,10 +33,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
-                                .requestMatchers(new AntPathRequestMatcher("/error")).permitAll() // <--- ADD THIS LINE
-                                // All other requests must be authenticated
-                                .anyRequest().authenticated()
+                                .anyRequest().permitAll()
                 )
                 // Add your custom token filter before the standard username/password filter
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -5,6 +5,6 @@ import java.math.BigDecimal;
 import java.util.UUID; // Import UUID
 
 public record PaymentRequest(
-        @NotNull UUID rentalId, // Changed Long to UUID
-        @NotNull BigDecimal amount
+        UUID rentalId, // Changed Long to UUID
+        BigDecimal amount
 ) {}

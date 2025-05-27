@@ -2,8 +2,6 @@ package id.ac.ui.cs.advprog.papikos.payment.service;
 
 // RentalServiceClient might still be needed if rental details are not in the token
 import id.ac.ui.cs.advprog.papikos.payment.client.RentalServiceClient;
-// AuthServiceClient is no longer needed in this service if user existence is guaranteed by the token
-// import id.ac.ui.cs.advprog.papikos.payment.client.AuthServiceClient;
 import id.ac.ui.cs.advprog.papikos.payment.dto.*;
 import id.ac.ui.cs.advprog.papikos.payment.entity.*;
 import id.ac.ui.cs.advprog.papikos.payment.exception.*;
