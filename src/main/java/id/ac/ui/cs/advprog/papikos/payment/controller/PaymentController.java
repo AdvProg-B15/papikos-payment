@@ -24,7 +24,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/payment")
 @RequiredArgsConstructor
-@Validated
 @Slf4j
 public class PaymentController {
 
@@ -48,7 +47,7 @@ public class PaymentController {
 
     @PostMapping("/topup")
     public ApiResponse<TransactionDto> topUp(
-            @Valid @RequestBody TopUpRequest request,
+            @RequestBody TopUpRequest request,
             Authentication authentication // Changed from Jwt to Authentication
     ) {
         UUID userId = getUserIdFromAuthentication(authentication); // Use the new method
@@ -65,7 +64,7 @@ public class PaymentController {
 
     @PostMapping("/pay")
     public ApiResponse<TransactionDto> payForRental(
-            @Valid @RequestBody PaymentRequest request,
+            @RequestBody PaymentRequest request,
            Authentication authentication // Changed from Jwt to Authentication
     ) {
         UUID userId = getUserIdFromAuthentication(authentication); // Use the new method
